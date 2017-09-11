@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.joda.time.DateTime;
@@ -65,19 +66,22 @@ public class AdminService {
 	
 	
 // <----------------------------------------------- Author Transactions -------------------------------------------------->	
-	
-	@RequestMapping(value = "/addAuthor", method = RequestMethod.POST, consumes="application/json")
+	@RequestMapping(value = "/saveAuthor", method = RequestMethod.POST, consumes="application/json")
 	@Transactional
-	public void addAuthor(@RequestBody Author author) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
+	public void addAuthor(@RequestBody Author author) throws SQLException{
+		try {
 			if(author.getAuthorId()!=null){
 				authorDao.updateAuthor(author);
 			}else{
 				authorDao.addAuthor(author);
 			}
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
+		}
 	}
 	
-	
-	public Author getAuthorByPK(Integer authorId) throws SQLException{
+	@RequestMapping(value = "/getAuthorByPK/{authorId}", method = RequestMethod.GET, produces="application/json")
+	public Author getAuthorByPK(@PathVariable Integer authorId) throws SQLException{
 		try {
 			return authorDao.readAuthorByPK(authorId);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
@@ -89,7 +93,11 @@ public class AdminService {
 	@RequestMapping(value = "/viewAuthors/{pageNo}", method = RequestMethod.GET, produces="application/json")
 	public List<Author> getAllAuthors(@PathVariable int pageNo) throws SQLException{
 		try {
-			return authorDao.readAllAuthors(pageNo);
+			List<Author> authors = authorDao.readAllAuthors(pageNo);
+			for(Author a : authors){
+				a.setBooks(bookDao.readBooksByAuthor(a.getAuthorId()));
+			}
+			return authors;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -97,10 +105,29 @@ public class AdminService {
 		return null;
 	}
 	
+	@RequestMapping(value = "/initAuthor", method = RequestMethod.GET, produces="application/json")
+	public Author initAuthor() throws SQLException{
+		return new Author();
+	}
 	
-	public List<Author> getAuthorsByName(String authorName, Integer pageNo) throws SQLException{
+	@RequestMapping(value = "/initAuthorList", method = RequestMethod.GET, produces="application/json")
+	public List<Author> initAuthorList() throws SQLException{
+		return new ArrayList<Author>();
+	}
+	
+	@RequestMapping(value = "/searchAuthors/{authorName}", method = RequestMethod.GET, produces="application/json")
+	public List<Author> getAuthorsByName(@PathVariable String authorName) throws SQLException{
 		try {
-			return authorDao.readAuthorsByName(authorName, pageNo);
+			List<Author> authors = new ArrayList<Author>();
+			if(authorName!=null && !authorName.isEmpty()){
+				authors = authorDao.readAuthorsByName(authorName);
+			}else{
+				authors = authorDao.readAllAuthors(1);
+			}
+			for(Author a : authors){
+				a.setBooks(bookDao.readBooksByAuthor(a.getAuthorId()));
+			}
+			return authors;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -108,14 +135,16 @@ public class AdminService {
 		return null;
 	}
 	
-	@RequestMapping(value = "/deleteAuthor", method = RequestMethod.DELETE, consumes="application/json")
-	@Transactional
-	public void deleteAuthor(@RequestBody Author author) throws SQLException {
+	@RequestMapping(value = "/deleteAuthor/{authorId}", method = RequestMethod.GET, produces="application/json")
+	public Author deleteAuthor(@PathVariable Integer authorId) throws SQLException {
+		Author author = new Author();
 		try {
+			author.setAuthorId(authorId);
 			authorDao.deleteAuthor(author);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
-		} 
+		}
+		return author;
 	}
 	
 	public void deleteBookAuthor(Integer bookId) throws SQLException {
@@ -142,14 +171,26 @@ public class AdminService {
 	
 // <----------------------------------------------- Book Transactions------------------------------------------------------>
 	
-	@RequestMapping(value = "/deleteBook", method = RequestMethod.DELETE, consumes="application/json")
-	@Transactional
-	public void deleteBook(@RequestBody Book book) throws SQLException {
+	@RequestMapping(value = "/initBook", method = RequestMethod.GET, produces="application/json")
+	public Book initBook() throws SQLException{
+		return new Book();
+	}
+	
+	@RequestMapping(value = "/initList", method = RequestMethod.GET, produces="application/json")
+	public List<Book> initBookList() throws SQLException{
+		return new ArrayList<Book>();
+	}
+	
+	@RequestMapping(value = "/deleteBook/{bookId}", method = RequestMethod.GET, produces="application/json")
+	public Book deleteBook(@PathVariable Integer bookId) throws SQLException {
+		Book book = new Book();
 		try {
+			book.setBookId(bookId);
 			bookDao.deleteBook(book);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
+		return book;
 	}
 	
 	@RequestMapping(value = "/addBook", method = RequestMethod.POST, consumes="application/json")
@@ -166,7 +207,8 @@ public class AdminService {
 		} 
 	}
 	
-	public Book getBookByPK(Integer bookId) throws SQLException{
+	@RequestMapping(value = "/getBookByPK/{bookId}", method = RequestMethod.GET, produces="application/json")
+	public Book getBookByPK(@PathVariable Integer bookId) throws SQLException{
 		 
 		try {
 			return bookDao.readBookByPK(bookId);  
@@ -210,7 +252,13 @@ public class AdminService {
 	@RequestMapping(value = "/viewBooks/{pageNo}", method = RequestMethod.GET, produces="application/json")
 	public List<Book> getAllBooks(@PathVariable int pageNo) throws SQLException, InstantiationException, IllegalAccessException, ClassNotFoundException{ 
 		try {
-			return bookDao.readAllBooks(1);
+			List<Book> books =  bookDao.readAllBooks(pageNo);
+			for(Book b : books){
+				b.setAuthors(authorDao.readAuthorsByBook(b.getBookId()));
+				b.setGenres(genreDao.readGenreByBook(b.getBookId()));
+				b.setNoCopies(bCopiesDao.getCopiesByBook(b.getBookId()));
+			}
+			return books;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -218,10 +266,16 @@ public class AdminService {
 		return null;
 	}
 	
-	public List<Book> getBooksByName(String bookName) throws SQLException{
-		 
+	@RequestMapping(value = "/searchBooks/{bookName}", method = RequestMethod.GET, produces="application/json")
+	public List<Book> getBooksByName(@PathVariable String bookName) throws SQLException{
 		try {
-			return bookDao.readBooksByName(bookName);
+			List<Book> books =  bookDao.readBooksByName(bookName);
+			for(Book b : books){
+				b.setAuthors(authorDao.readAuthorsByBook(b.getBookId()));
+				b.setGenres(genreDao.readGenreByBook(b.getBookId()));
+				b.setNoCopies(bCopiesDao.getCopiesByBook(b.getBookId()));
+			}
+			return books;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -244,10 +298,16 @@ public class AdminService {
 	
 // <----------------------------------------------- Borrower Transactions------------------------------------------------------>
 	
-	@RequestMapping(value = "/addBorrower", method = RequestMethod.POST, consumes="application/json")
-	@Transactional
-	public void addBorrower(@RequestBody Borrower borrower) throws SQLException{
+	
+	
+	
+	@RequestMapping(value = "/addBorrower/{name}/{address}/{phone}", method = RequestMethod.GET, produces="application/json")
+	public Borrower addBorrower(@PathVariable String name, @PathVariable String address, @PathVariable String phone) throws SQLException{
+		Borrower borrower = new Borrower();
 		try {
+			borrower.setName(name);
+			borrower.setAddress(address);
+			borrower.setPhone(phone);
 			if(borrower.getCardNo() != null){
 				borrowerDao.updateBorrower(borrower);
 			}else{
@@ -257,6 +317,29 @@ public class AdminService {
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		}	
+		return borrower;
+	}
+	
+	@RequestMapping(value = "/updateBorrower/{values}", method = RequestMethod.GET, produces="application/json")
+	public Borrower updateBorrower(@PathVariable String values) throws SQLException{
+		String[] b = values.split(",");
+		Integer cardNo = Integer.parseInt(b[0]);
+		Borrower borrower = new Borrower();
+		try {
+			borrower.setCardNo(cardNo);
+			borrower.setName(b[1].trim());
+			borrower.setAddress(b[2].trim());
+			borrower.setPhone(b[3].trim());
+			if(borrower.getCardNo() != null){
+				borrowerDao.updateBorrower(borrower);
+			}else{
+				borrowerDao.addBorrower(borrower);
+			}
+			  
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
+		}	
+		return borrower;
 	}
 	
 	public Borrower getBorrowerByPK(Integer cardNo) throws SQLException{
@@ -280,8 +363,8 @@ public class AdminService {
 		return null;
 	}
 	
-	public List<Borrower> getBorrowersByName(String borrowersName) throws SQLException{
-		 
+	@RequestMapping(value = "/searchBorrower/{borrowerName}", method = RequestMethod.GET, produces = "application/json")
+	public List<Borrower> getBorrowersByName(String borrowersName) throws SQLException{ 
 		try {
 			return borrowerDao.readBorrowersByName(borrowersName);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
@@ -302,23 +385,38 @@ public class AdminService {
 		return null;
 	}
 	
-	@RequestMapping(value = "/deleteBorrower", method = RequestMethod.DELETE, consumes="application/json")
-	@Transactional
-	public void deleteBorrower(@RequestBody Borrower borrower) throws SQLException {
+	@RequestMapping(value = "/deleteBorrower/{cardNo}", method = RequestMethod.GET, produces="application/json")
+	public Borrower deleteBorrower(@PathVariable Integer cardNo) throws SQLException {
+		Borrower borrower = new Borrower();
 		try {
+			borrower.setCardNo(cardNo);
 			borrowerDao.deleteBorrower(borrower);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
+		return borrower;
 	}
 	
 // <----------------------------------------------- Borrower Transactions End------------------------------------------------------>	
 	
 
 // <----------------------------------------------- Loan Transactions-------------------------------------------------------------->	
-	@RequestMapping(value = "/overrideLoans", method = RequestMethod.POST, consumes="application/json")
-	@Transactional
-	public void overrideDate(@RequestBody BookLoans loans) throws SQLException{
+	@RequestMapping(value = "/overrideLoans/{bookId}/{branchId}/{cardNo}/{days}", method = RequestMethod.GET, produces="application/json")
+	public BookLoans overrideDate(@PathVariable Integer bookId, @PathVariable Integer branchId, @PathVariable Integer cardNo, 
+			@PathVariable Integer days) throws SQLException{
+			BookLoans loans = new BookLoans();
+//			long millis = System.currentTimeMillis();  
+//		    Date today = new Date(millis);
+//		    long ltime = today.getTime() + days*24*60*60*1000;
+//		    Date dueDate = new Date(ltime);
+			long millis = System.currentTimeMillis();  
+		    Date dateOut = new Date(millis);
+		    long ltime = dateOut.getTime() + days*24*60*60*1000;
+		    Date dueDate = new Date(ltime);
+		    loans.setBookId(bookId);
+		    loans.setBranchId(branchId);
+		    loans.setCardNo(cardNo);
+		    loans.setDueDate(dueDate);
 		try {
 			if(loans.getDueDate() != null){
 				bLoansDao.updateLoansDue(loans);
@@ -326,12 +424,17 @@ public class AdminService {
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
+		return loans;
 	}
 	
 	@RequestMapping(value = "/viewLoans/{pageNo}", method = RequestMethod.GET, produces="application/json")
 	public List<BookLoans> getAllBookLoans(@PathVariable int pageNo) throws SQLException{
 		try {
-			return bLoansDao.readAllOverrideLoans(pageNo);
+			List<BookLoans> loans = bLoansDao.readAllOverrideLoans(pageNo);
+			for(BookLoans l : loans){
+				l.setBook(bookDao.readBookByPK(l.getBookId()));
+			}
+			return loans;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -357,9 +460,20 @@ public class AdminService {
 // <----------------------------------------------- Publisher Transactions------------------------------------------------------>	
 	
 	// Add publisher //
-	@RequestMapping(value = "/addPublisher", method = RequestMethod.POST, consumes="application/json")
-	@Transactional
-	public void addPublisher(@RequestBody Publisher publisher) throws SQLException{ 
+	@RequestMapping(value = "/addPublisher/{list}/{publisherName}/{publisherAddress}/{publisherPhone}", method = RequestMethod.GET, produces="application/json")
+	public Publisher addPublisher(@PathVariable Integer[] list, @PathVariable String publisherName, @PathVariable String publisherAddress, @PathVariable String publisherPhone) throws SQLException{ 
+		Publisher publisher = new Publisher();
+		publisher.setPublisherName(publisherName);
+		publisher.setPublisherAddress(publisherAddress);
+		publisher.setPublisherPhone(publisherPhone);
+		List<Book> books = new ArrayList<>();
+		for(Integer id : list){
+			Book b = new Book();
+			b.setBookId(id);
+			books.add(b);
+		}
+		publisher.setBooks(books);
+		System.out.println("here");
 		try {
 			if(publisher.getPublisherId() != null){
 				publisherDao.updatePublisher(publisher);
@@ -370,6 +484,31 @@ public class AdminService {
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
+		return publisher;
+	}
+	
+	@RequestMapping(value = "/updatePublisher/{values}", method = RequestMethod.GET, produces = "application/json")
+	public Publisher updatePublisher(@PathVariable String values){
+		String[] p = values.split(",");
+		Integer publisherId = Integer.parseInt(p[0]);
+		Publisher publisher = new Publisher();
+		try {
+			publisher.setPublisherId(publisherId);
+			publisher.setPublisherName(p[1].trim());
+			publisher.setPublisherAddress(p[2].trim());
+			publisher.setPublisherPhone(p[3].trim());
+			if(publisher.getPublisherId() != null){
+				publisherDao.updatePublisher(publisher);
+			}
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
+		} 
+		return publisher;
+	}
+	
+	@RequestMapping(value = "/initPublisher", method = RequestMethod.GET, produces="application/json")
+	public Publisher initPublisher() throws SQLException{
+		return new Publisher();
 	}
 	
 	public Publisher getPublisherById(Integer pubId) throws SQLException{
@@ -392,7 +531,8 @@ public class AdminService {
 		return null;
 	}
 	
-	public List<Publisher> getPublishersByName(String publisherName) throws SQLException{
+	@RequestMapping(value = "/searchPublisher/{publisherName}", method = RequestMethod.GET, produces="application/json")
+	public List<Publisher> getPublishersByName(@PathVariable String publisherName) throws SQLException{
 		try {
 			return publisherDao.readPublishersByName(publisherName);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
@@ -412,14 +552,16 @@ public class AdminService {
 		return null;
 	}
 	
-	@RequestMapping(value = "/deletePublisher", method = RequestMethod.DELETE, consumes="application/json")
-	@Transactional
-	public void deletePublisher(@RequestBody Publisher publisher) throws SQLException {
+	@RequestMapping(value = "/deletePublisher/{publisherId}", method = RequestMethod.GET, produces="application/json")
+	public Publisher deletePublisher(@PathVariable Integer publisherId) throws SQLException {
+		Publisher pub = new Publisher();
 		try {
-			publisherDao.deletePublisher(publisher);
+			pub.setPublisherId(publisherId);
+			publisherDao.deletePublisher(pub);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
-		} 
+		}
+		return pub;
 	}
 	
 	public Publisher getPublisherByPK(Integer publisherId) throws SQLException{
@@ -445,6 +587,17 @@ public class AdminService {
 		return null;
 	}
 	
+	@RequestMapping(value = "/initGenre", method = RequestMethod.GET, produces = "application/json")
+	public Genre initGenre(){
+		return new Genre();
+	}
+	
+	@RequestMapping(value = "/initGenreList", method = RequestMethod.GET, produces = "application/json")
+	public List<Genre> initGenreList(){
+		return new ArrayList<Genre>(0);
+	}
+	
+	@RequestMapping(value = "/viewGenres", method = RequestMethod.GET, produces = "application/json")
 	public List<Genre> getAllGenres() throws SQLException{
 		try {
 			return genreDao.readAllGenres();

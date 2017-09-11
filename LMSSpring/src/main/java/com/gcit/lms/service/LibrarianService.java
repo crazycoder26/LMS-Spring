@@ -19,6 +19,7 @@ import com.gcit.lms.dao.BookDAO;
 import com.gcit.lms.dao.BookLoansDAO;
 import com.gcit.lms.dao.BorrowerDAO;
 import com.gcit.lms.dao.BranchDAO;
+import com.gcit.lms.dao.GenreDAO;
 import com.gcit.lms.dao.PublisherDAO;
 import com.gcit.lms.entity.Author;
 import com.gcit.lms.entity.Book;
@@ -48,6 +49,9 @@ public class LibrarianService {
 	
 	@Autowired
 	BranchDAO branchDao;
+	
+	@Autowired
+	GenreDAO genreDao;
 	
 	@RequestMapping(value = "/viewBranches/{pageNo}", method = RequestMethod.GET, produces = "application/json")
 	public List<LibraryBranch> getAllBranches(@PathVariable int pageNo) throws SQLException{
@@ -80,11 +84,27 @@ public class LibrarianService {
 		return null;
 	}
 	
-	@RequestMapping(value = "/viewBranchBooks/{pageNo}/{branchId}", method = RequestMethod.GET, produces = "application/json")
-	public List<Book> getAllBooksWithBranch(@PathVariable Integer pageNo, @PathVariable Integer branchId) throws SQLException{
-		
+	@RequestMapping(value = "/initBranch", method = RequestMethod.GET, produces="application/json")
+	public LibraryBranch initBranch() throws SQLException{
+		return new LibraryBranch();
+	}
+	
+	@RequestMapping(value = "/initLoans", method = RequestMethod.GET, produces="application/json")
+	public BookLoans initLoans() throws SQLException{
+		return new BookLoans();
+	}
+	
+	@RequestMapping(value = "/viewBranchBooks/{branchId}", method = RequestMethod.GET, produces = "application/json")
+	public List<Book> getAllBooksWithBranch( @PathVariable Integer branchId) throws SQLException{
+		System.out.println(branchId);
 		try {
-			return bookDao.readAllbooksWithBranch(pageNo, branchId);
+			List<Book> books = bookDao.readAllbooksWithBranch(branchId);
+			for(Book b : books){
+				b.setAuthors(authorDao.readAuthorsByBook(b.getBookId()));
+				b.setGenres(genreDao.readGenreByBook(b.getBookId()));
+				b.setNoCopies(bCopiesDao.getCopiesByBook(b.getBookId()));
+			}
+			return books;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
@@ -117,10 +137,32 @@ public class LibrarianService {
 		}
 	}
 	
-	@RequestMapping(value = "/updateCopies", method = RequestMethod.POST, consumes = "application/json")
-	@Transactional
-	public void updateCopies(@RequestBody BookCopies copies) throws SQLException{
+	
+	@RequestMapping(value = "/updateBranch/{branchId}/{name}/{address}", method = RequestMethod.GET, produces = "application/json")
+	public LibraryBranch updateBranch(@PathVariable Integer branchId, @PathVariable String name, @PathVariable String address) throws SQLException{
+		LibraryBranch branch = new LibraryBranch();
 		try {
+			branch.setBranchId(branchId);
+			branch.setBranchAddress(address);
+			branch.setBranchName(name);
+			if(branch.getBranchId() != null){
+				branchDao.updateBranch(branch);
+			}else{
+				branchDao.addBranch(branch);
+			}
+		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
+			e.printStackTrace();
+		}
+		return branch;
+	}
+	
+	@RequestMapping(value = "/updateCopies/{branchId}/{bookId}/{noCopies}", method = RequestMethod.GET, produces = "application/json")
+	public BookCopies updateCopies(@PathVariable int branchId, @PathVariable int bookId, @PathVariable int noCopies) throws SQLException{
+		try {
+			BookCopies copies = new BookCopies();
+			copies.setBookId(bookId);
+			copies.setBranchId(branchId);
+			copies.setNoOfCopies(noCopies);
 			if(copies.getBookId() != null){
 				bCopiesDao.updateBookCopies(copies);
 			}else{
@@ -129,5 +171,6 @@ public class LibrarianService {
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
+		return new BookCopies();
 	}	
 }

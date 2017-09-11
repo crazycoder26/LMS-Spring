@@ -14,9 +14,10 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gcit.lms.dao.BookCopiesDAO;
+import com.gcit.lms.dao.BookDAO;
 import com.gcit.lms.dao.BookLoansDAO;
 import com.gcit.lms.dao.BorrowerDAO;
-
+import com.gcit.lms.entity.Author;
 import com.gcit.lms.entity.Book;
 import com.gcit.lms.entity.BookCopies;
 import com.gcit.lms.entity.BookLoans;
@@ -31,12 +32,32 @@ public class BorrowerService {
 	BorrowerDAO borrowerDao;
 	
 	@Autowired
+	BookDAO bookDao;
+	
+	@Autowired
 	BookLoansDAO bLoansDao;
 	
 	@Autowired
 	BookCopiesDAO bCopiesDao;
 	
 	
+	@RequestMapping(value = "/initBorrower", method = RequestMethod.GET, produces="application/json")
+	public Borrower initBorrower() throws SQLException{
+		return new Borrower();
+	}
+	
+	@RequestMapping(value = "/validateCard/{cardNo}", method = RequestMethod.GET, produces = "application/json")
+	public boolean validateCardNo(@PathVariable Integer cardNo){
+		try{
+			Borrower b = borrowerDao.readBorrowerByPK(cardNo);
+			if(b.getCardNo() != null){
+				return true;
+			}
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		return false;
+	}
 	
 	public String getBorrowerName(Integer cardNo) throws SQLException{
 		try {
@@ -53,16 +74,20 @@ public class BorrowerService {
 	@RequestMapping(value = "/viewBookLoans/{pageNo}/{cardNo}", method = RequestMethod.GET, produces = "application/json")
 	public List<BookLoans> getAllBookWithLoans(@PathVariable Integer pageNo, @PathVariable Integer cardNo) throws SQLException{
 		try {
-			return bLoansDao.readAllbooksWithCardNo(pageNo, cardNo);
+			List<BookLoans> loans = bLoansDao.readAllbooksWithCardNo(pageNo, cardNo);
+			for(BookLoans l : loans){
+				l.setBook(bookDao.readBookByPK(l.getBookId()));
+			}
+			return loans;
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
 		return null;
 	}
 	
-	@RequestMapping(value = "/checkOut", method = RequestMethod.POST, consumes = "application/json")
-	@Transactional
-	public void checkOut(@RequestBody Borrower borrower, @RequestBody Book book, @RequestBody LibraryBranch branch) throws SQLException{
+	@RequestMapping(value = "/checkOut/{cardNo}/{bookId}/{branchId}", method = RequestMethod.GET, produces = "application/json")
+	public BookLoans checkOut(@PathVariable Integer cardNo, @PathVariable Integer bookId, @PathVariable Integer branchId) throws SQLException{
+		 BookLoans bookLoans = new BookLoans();
 		try {
 			long millis = System.currentTimeMillis();  
 		    Date dateOut = new Date(millis);
@@ -70,47 +95,43 @@ public class BorrowerService {
 		    Date dueDate = new Date(ltime);
 //			save("insert into tbl_book_loans (bookId, branchId, cardNo, dateOut, dueDate, dateIn) values (?, ?, ?, ?, ?, ?)"
 //					,new Object[]{book.getBookId(), branch.getBranchId(), borrower.getCardNo(), dateOut,dueDate, null});
-		    BookLoans bookLoans = new BookLoans();
-		    bookLoans.setBookId(book.getBookId());
-		    bookLoans.setBranchId(branch.getBranchId());
-		    bookLoans.setCardNo(borrower.getCardNo());
+		   
+		    bookLoans.setBookId(bookId);
+		    bookLoans.setBranchId(branchId);
+		    bookLoans.setCardNo(cardNo);
 		    bookLoans.setDateOut(dateOut);
 		    bookLoans.setDueDate(dueDate);
 		    bookLoans.setDateIn(null);
 		    bLoansDao.addLoans(bookLoans);
 		  
 			BookCopies bookCopies = new BookCopies();
-			bookCopies.setBookId(book.getBookId());
-			bookCopies.setBranchId(branch.getBranchId());
+			bookCopies.setBookId(bookId);
+			bookCopies.setBranchId(branchId);
 			//bookCopies.setNoOfCopies(bookCopies.getNoOfCopies() - 1);
 			bCopiesDao.updateBookCopiesOut(bookCopies);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
+		return bookLoans;
 	}
 	
-	@RequestMapping(value = "/checkIn", method = RequestMethod.POST, consumes = "application/json")
-	@Transactional
-	public void checkIn(@RequestBody Borrower borrower, @RequestBody Book book,  @RequestBody LibraryBranch branch) throws SQLException{
+	@RequestMapping(value = "/checkIn/{bookId}/{branchId}/{cardNo}", method = RequestMethod.GET, produces = "application/json")
+	public BookLoans checkIn(@PathVariable Integer bookId, @PathVariable Integer branchId, @PathVariable Integer cardNo) throws SQLException{
+		 BookLoans bookLoans = new BookLoans();
 		try {
-			long millis = System.currentTimeMillis();  
-		    Date dateIn = new Date(millis);
-		    BookLoans bookLoans = new BookLoans();
-		    bookLoans.setBookId(book.getBookId());
-		    bookLoans.setBranchId(branch.getBranchId());
-		    bookLoans.setCardNo(borrower.getCardNo());
-		    bookLoans.setDateOut(bookLoans.getDateOut());
-		    bookLoans.setDueDate(bookLoans.getDueDate());
-		    bookLoans.setDateIn(dateIn);
+		    bookLoans.setBookId(bookId);
+		    bookLoans.setBranchId(branchId);
+		    bookLoans.setCardNo(cardNo);
 		    bLoansDao.updateLoans(bookLoans);
 		  
 			BookCopies bookCopies = new BookCopies();
-			bookCopies.setBookId(book.getBookId());
-			bookCopies.setBranchId(branch.getBranchId());
+			bookCopies.setBookId(bookId);
+			bookCopies.setBranchId(branchId);
 			bCopiesDao.updateBookCopiesIn(bookCopies);
 		} catch (InstantiationException | IllegalAccessException | ClassNotFoundException | SQLException e) {
 			e.printStackTrace();
 		} 
+		return bookLoans;
 	}
 	
 }

@@ -48,16 +48,19 @@ public class BookDAO extends BaseDAO<Book> implements ResultSetExtractor<List<Bo
 	}
 	
 	public void deleteBook(Book book) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
+		genreDao.deleteBookGenre(book.getBookId());
+		authorDao.deleteBookAuthor(book.getBookId());
 		template.update("delete from tbl_book where bookId = ?", new Object[]{book.getBookId()});
+
 	}
+	
 
 	public List<Book> readAllBooks(int pageNo) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
 		setPageNo(pageNo);
 		return template.query("select * from tbl_book", this);
 	}
 
-	public List<Book> readAllbooksWithBranch(int pageNo, Integer branchId) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
-		setPageNo(pageNo);
+	public List<Book> readAllbooksWithBranch(Integer branchId) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
 		BookCopies bc = new BookCopies();
 		List<BookCopies> copies  = bCopiesDao.getAllCopiesId(branchId);
 		 List<Book> books = new ArrayList<>();
@@ -98,12 +101,6 @@ public class BookDAO extends BaseDAO<Book> implements ResultSetExtractor<List<Bo
 			Publisher pub = new Publisher();
 			pub.setPublisherId(rs.getInt("pubId"));
 			b.setPublisher(pub);
-			List<Author> authors = authorDao.readAuthorsByBook(b.getBookId());
-			b.setAuthors(authors);
-			List<Genre> genres = genreDao.readGenreByBook(b.getBookId());
-			b.setGenres(genres);
-			Integer copies = bCopiesDao.getCopiesByBook(b.getBookId());
-			b.setNoCopies(copies);
 			books.add(b);
 		}
 		return books;

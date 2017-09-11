@@ -51,7 +51,7 @@ public class BookLoansDAO extends BaseDAO<BookLoans> implements ResultSetExtract
 	
 	public List<BookLoans> readAllOverrideLoans(int pageNo) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
 		setPageNo(pageNo);
-		return template.query("select * from tbl_book_loans where dueDate > ? and dateIn is null", new Object[]{curDate}, this);
+		return template.query("select * from tbl_book_loans where dateIn is null", this);
 		
 	}
 	

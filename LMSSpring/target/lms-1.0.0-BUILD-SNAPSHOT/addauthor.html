@@ -1,0 +1,25 @@
+<div ng-controller="addAuthorController">
+	Enter Author Name: <input type="text" ng-model="author.authorName"><br />
+	<button type="button" ng-click="saveAuthor()">Add Author</button>
+</div>
+
+
+<!-- <div ng-controller = "addAuthorController">
+	<center>	<h1>Enter The Author Name:</h1> <input type="text" ng-model="author.authorName"><br/> </center>
+		
+   	<center>	 <h1> Select The Book You Want To Associate</h1> </center>
+       <center>
+       <form name = "booklist">
+       <select name="myOption" multiple>
+			<option type = "dropdown" ng-model = "author.books" ng-repeat ="b in books" value="b.title">{{b.title}}</option>
+			
+		</select>
+		</form>
+       </center>  <br />
+       
+	<script>
+		
+	</script>
+		
+	<center><button class="btn btn-sm btn-primary" ng-click="saveAuthor()">Add Author</button></center>
+</div> -->

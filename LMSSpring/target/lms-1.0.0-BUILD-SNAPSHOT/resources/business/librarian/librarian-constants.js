@@ -1,0 +1,3 @@
+lmsApp.constant("borrowerConstants",{
+	
+})

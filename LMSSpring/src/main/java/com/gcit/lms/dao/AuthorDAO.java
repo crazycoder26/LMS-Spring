@@ -24,6 +24,7 @@ public class AuthorDAO extends BaseDAO<Author> implements ResultSetExtractor<Lis
 	BookDAO bookDao;
 	
 	public void addAuthor(Author author) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
+		System.out.println(author.getAuthorName());
 		Integer authorId = addAuthorWithId(author);
 		List<Book> books = author.getBooks();
 		if(books != null){
@@ -56,7 +57,14 @@ public class AuthorDAO extends BaseDAO<Author> implements ResultSetExtractor<Lis
 	}
 	
 	public void deleteAuthor(Author author) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
+		System.out.println(author.getAuthorId());
 		template.update("delete from tbl_author where authorId = ?", new Object[]{author.getAuthorId()});
+		List<Book> books = author.getBooks();
+		if(books != null){
+			for(Book b : books){
+				deleteBookAuthor(b.getBookId());
+			}
+		}
 	}
 	
 	public void deleteBookAuthor(Integer bookId) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
@@ -92,8 +100,8 @@ public class AuthorDAO extends BaseDAO<Author> implements ResultSetExtractor<Lis
 			Author a = new Author();
 			a.setAuthorId(rs.getInt("authorId"));
 			a.setAuthorName(rs.getString("authorName"));
-			List<Book> books = bookDao.readBooksByAuthor(a.getAuthorId());
-			a.setBooks(books);
+//			List<Book> books = bookDao.readBooksByAuthor(a.getAuthorId());
+//			a.setBooks(books);
 			authors.add(a);
 		}
 		return authors;
@@ -101,8 +109,7 @@ public class AuthorDAO extends BaseDAO<Author> implements ResultSetExtractor<Lis
 	
 	
 
-	public List<Author> readAuthorsByName(String authorName, Integer pageNo) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
-		setPageNo(pageNo);
+	public List<Author> readAuthorsByName(String authorName) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException {
 		authorName = "%"+authorName+"%";
 		return template.query("select * from tbl_author where authorName LIKE  ?", new Object[]{authorName}, this);
 	}

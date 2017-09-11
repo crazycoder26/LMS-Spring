@@ -25,6 +25,10 @@ public class GenreDAO extends BaseDAO<Genre> implements ResultSetExtractor<List<
 	public void deleteGenre(Genre genre) throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
 		template.update("delete from tbl_genre where genre_id = ?", new Object[]{genre.getGenreId()});
 	}
+		
+	public void deleteBookGenre(Integer bookId){
+		template.update("delete from tbl_book_genres where bookId = ?", new Object[]{bookId});
+	}
 	
 	public List<Genre> readAllGenres() throws InstantiationException, IllegalAccessException, ClassNotFoundException, SQLException{
 		return template.query("select * from tbl_genre", this);

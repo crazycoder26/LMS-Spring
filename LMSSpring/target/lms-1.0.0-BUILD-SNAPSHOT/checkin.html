@@ -1,0 +1,49 @@
+<script
+	src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<div ng-controller="checkIn">
+
+	Enter The Card Number: <input type="text" ng-model="borrower.cardNo"><br />
+	<button type="button" ng-click="validateCard(borrower.cardNo)">Validate Card</button>
+	
+	
+	<!-- Search Authors -->
+	<div class="input-group" ng-if = "showBranchTable">
+		<h3>Select the branch you want to borrower the book from</h3><br/>
+		<tr><input type="text" class="form-control" ng-model="searchString" placeholder="Search for..." ng-change="searchBranches()">
+	</div>
+
+	<!-- Pagination -->
+	<div class="col-md-10" ng-if = "showBranchTable">
+		<tr>
+		<ul class="pagination">
+			<li><a href="" ng-click="pagination.prevPage()">&laquo;</a></li>
+			<li ng-repeat="n in [] | range: pagination.numPages"
+				ng-class="{active: n == pagination.page}"><a href=""
+				ng-click="pagination.toPageId(n)">{{n + 1}}</a></li>
+			<li><a href="" ng-click="pagination.nextPage()">&raquo;</a></li>
+		</ul>
+	</div>
+
+	<!-- Table -->
+	<table class="table table-striped" ng-if = "showBranchTable">
+		<tr>
+			<th>#</th>
+			<th ng-click="sortBranches()">Book Title</th> 
+			<th>Borrower cardNo</th>
+			<th>Date Out</th>
+			<th>Due Date</th>
+			<th>Date In</th>
+			<th>Action</th>
+		</tr>
+		<tr ng-repeat="l in loans | startFrom: pagination.page * pagination.perPage | limitTo: pagination.perPage">
+			<td>{{$index+1}}</td>
+			<td>{{l.book.title}}</td>
+			<td>{{l.cardNo}}</td>
+			<td>{{l.dateOut}}</td>
+			<td>{{l.dueDate}}</td>
+			<td>{{l.dateIn}}</td>
+			<td><button type="button" class='btn btn-sm btn-primary' 
+					ng-click="checkIn(b.branchId)">check In</button></td>
+		</tr>
+	</table>
+</div>
